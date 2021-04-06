@@ -1,52 +1,65 @@
+#import
 import discord
-import requests
-import os
-#from dotenv import load_dotenv
+import websocket, json
 
-#start up
+#lists
 
-f = open("data/token.txt", "r")
-TOKEN = f.readlines(1)
-f.close()
-client = discord.Client()
-
-@client.event
-async def on_ready():
-    print(f'{client.user} has connected to Discord successfully!')
-
-client.run('Token') #replace token with your own token
-
-
-
-
+closes, highs, lows, = [], [], [] 
 
 #defines
 
-def get_prices():
-    coins = ["BTC", "ETH", "XRP", "LTC", "BCH", "ADA", "DOT", "LINK", "BNB", "XLM", "WIN" , "HNT" , "BAT"]  #You can Add more later
+def on_message(ws, message):
+    json_message = json.loads(message)
+    candle = json_message['k']
+    is_candle_closed = candle['x']
+    closed = candle['c']
+    high = candle['h']
+    low =  candle['l']
+    vol = candle['v']
+    if is_candle_closed:
+        closes.append(float(closed))
+        highs.append(float(high))
+        lows.append(float(low))
 
-    crypto_data = requests.get(
-        "https://min-api.cryptocompare.com/data/pricemultifull?fsyms={}&tsyms=USD".format(",".join(coins))).json()["RAW"]
+    print(closes)
+    print(highs)
+    print(lows)
 
-    data = {}
-    for i in crypto_data:
-        data[i] = {
-            "coin": i,
-            "price": crypto_data[i]["USD"]["PRICE"],
-            "change_day": crypto_data[i]["USD"]["CHANGEPCT24HOUR"],
-            "change_hour": crypto_data[i]["USD"]["CHANGEPCTHOUR"]
-        }
 
-    return data
 
-def start(update, context):
-    chat_id = update.effective_chat.id
-    message = ""
+def on_close(ws):
+    print("### Closed ###")
 
-    crypto_data = get_prices()
-    for i in crypto_data:
-        coin = crypto_data[i]["coin"]
-        price = crypto_data[i]["price"]
-        change_day = crypto_data[i]["change_day"]
-        change_hour = crypto_data[i]["change_hour"]
-        message += f"Coin: {coin}\nPrice: ${price:,.2f}\nHour Change: {change_hour:.3f}%\nDay Change: {change_day:.3f}%\n\n"
+#start up
+cc = 'btcusd'
+interval = '1m'
+
+socket = f'wss://stream.binace.com:9443/ws/{cc}t@kline_{interval}'
+ws = websocket.WebSocketApp(socket,on_message= on_message, on_close= on_close)
+
+
+
+
+
+
+
+
+#client = discord.Client()
+
+#@client.event
+#async def on_ready():
+    #print(f'{client.user} has connected to Discord successfully!')
+
+
+
+
+
+
+
+
+
+
+
+#DON'T TOUCH UNLESS YOUR CHANGING THE TOKEN
+
+#client.run('') #replace token with your own token
